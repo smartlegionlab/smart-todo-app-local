@@ -39,6 +39,8 @@
 
 ### Installation & Running
 
+
+
 1. **Run the application:**
    ```bash
    python main.py
@@ -169,3 +171,26 @@ Copyright © 2024-2025, Alexander Suvorov. All rights reserved.
 ---
 
 **Ready to get organized?** Run `python main.py` and start managing your tasks efficiently!
+
+---
+
+Termux:
+
+```bash
+pkg update
+
+pkg upgrade
+
+pkg install python
+
+pkg install git
+
+git clone https://github.com/smartlegionlab/smart-todo-app-local.git
+
+cd smart-todo-app-local
+
+python main.py
+
+```
+
+---
