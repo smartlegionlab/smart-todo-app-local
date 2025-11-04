@@ -26,7 +26,7 @@ body {
 }
 
 .container {
-    max-width: 800px;
+    max-width: 1200px;
     margin: 0 auto;
     padding: 0 20px;
 }
@@ -543,4 +543,32 @@ body {
 
 .task-item.dragging-over {
     border-top: 2px solid #0d6efd;
+}
+
+.task-item:focus,
+.task-item:hover {
+    background: rgba(255, 165, 0, 0.1) !important;
+    border-color: #ffa500 !important;
+    transform: translateY(-1px);
+}
+
+.task-item.dragging {
+    background: rgba(255, 165, 0, 0.2) !important;
+    border-color: #ffa500 !important;
+}
+
+.task-item:focus-visible {
+    outline: 2px solid #ffa500;
+    outline-offset: 2px;
+}
+
+.btn-action:focus,
+.nav-btn:focus,
+.tab:focus {
+    outline: 2px solid #ffa500;
+    outline-offset: 2px;
+}
+
+.task-item:active {
+    transform: scale(0.98);
 }

@@ -314,13 +314,20 @@ async saveNewOrder() {
             return;
         }
 
-        if (!confirm(`Are you sure you want to delete ${completedTasks.length} completed task(s)?`)) return;
+        if (!confirm(`Are you sure you want to delete ${completedTasks.length} completed task(s)? This action cannot be undone.`)) return;
 
         try {
-            for (const task of completedTasks) {
-                await this.deleteTask(task.uuid);
-            }
-            this.showNotification('Completed tasks cleared', 'success');
+            await Promise.all(
+                completedTasks.map(task => 
+                    fetch(`/api/tasks/${task.uuid}`, {
+                        method: 'DELETE'
+                    })
+                )
+            );
+            
+            await this.loadTasks();
+            this.showNotification(`Successfully deleted ${completedTasks.length} completed tasks`, 'success');
+            
         } catch (error) {
             console.error('Failed to clear completed tasks:', error);
             this.showNotification('Failed to clear completed tasks', 'error');
@@ -444,6 +451,7 @@ async saveNewOrder() {
             
             taskItem.dataset.uuid = task.uuid;
             taskItem.draggable = true;
+            taskItem.tabIndex = 0;
             
             if (task.completed) {
                 taskItem.classList.add('completed');
@@ -457,6 +465,7 @@ async saveNewOrder() {
 
             container.appendChild(taskElement);
         });
+        
     }
 
     enableEditMode(taskElement, task) {
