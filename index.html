@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart ToDo App</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="header-content">
+                <div class="avatar">
+                    <i class="fas fa-tasks"></i>
+                </div>
+                <div class="header-info">
+                    <h1>Smart ToDo App</h1>
+                    <p>Stay Organized & Productive</p>
+                    <div class="badges">
+                        <span class="badge"><i class="fas fa-database"></i> SQLite</span>
+                        <span class="badge"><i class="fas fa-mobile"></i> Responsive</span>
+                        <span class="badge"><i class="fas fa-palette"></i> Dark Theme</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat">
+                    <div class="stat-number" id="totalTasks">0</div>
+                    <div class="stat-label">Total Tasks</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number" id="activeTasks">0</div>
+                    <div class="stat-label">Active</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number" id="completedTasks">0</div>
+                    <div class="stat-label">Completed</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number" id="completionRate">0%</div>
+                    <div class="stat-label">Completion</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number" id="todayTasks">0</div>
+                    <div class="stat-label">Today</div>
+                </div>
+            </div>
+
+            <div class="nav">
+                <button class="nav-btn" id="clearCompleted">
+                    <i class="fas fa-broom"></i>
+                    <span>Clear Completed</span>
+                </button>
+                <button class="nav-btn" id="importTasks">
+                    <i class="fas fa-upload"></i>
+                    <span>Import</span>
+                </button>
+                <button class="nav-btn" id="exportTasks">
+                    <i class="fas fa-download"></i>
+                    <span>Export</span>
+                </button>
+                <button class="nav-btn nav-btn-danger" id="exitApp">
+                    <i class="fas fa-power-off"></i>
+                    <span>Exit</span>
+                </button>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <div class="add-task">
+                <div class="input-group">
+                    <input type="text" id="taskInput" class="form-control" 
+                           placeholder="What needs to be done?" 
+                           aria-label="New task">
+                    <button class="btn btn-primary" type="button" id="addTaskBtn">
+                        <i class="fas fa-plus"></i> Add Task
+                    </button>
+                </div>
+            </div>
+
+            <div class="filter-tabs">
+                <div class="tabs">
+                    <button class="tab active" data-filter="active">
+                        <i class="fas fa-clock"></i>
+                        <span>Active</span>
+                        <span class="tab-count" id="activeCount">0</span>
+                    </button>
+                    <button class="tab" data-filter="all">
+                        <i class="fas fa-list"></i>
+                        <span>All</span>
+                        <span class="tab-count" id="allCount">0</span>
+                    </button>
+                    <button class="tab" data-filter="completed">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Completed</span>
+                        <span class="tab-count" id="completedCount">0</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="tasks-container" id="tasksContainer">
+            </div>
+
+            <div class="empty-state" id="emptyState">
+                <div class="empty-icon">
+                    <i class="fas fa-clipboard-list"></i>
+                </div>
+                <h3>No tasks yet</h3>
+                <p>Add your first task to get started!</p>
+            </div>
+        </main>
+    </div>
+
+    <template id="taskTemplate">
+        <div class="task-item" data-uuid="" data-completed="false">
+            <div class="task-content">
+                <div class="task-main">
+                    <div class="task-checkbox">
+                        <input type="checkbox" class="task-completed">
+                        <span class="checkmark"></span>
+                    </div>
+                    <div class="task-text">
+                        <span class="task-name"></span>
+                        <div class="task-date"></div>
+                    </div>
+                </div>
+                <div class="task-actions">
+                    <button class="btn-action move-up" title="Move Up">
+                        <i class="fas fa-arrow-up"></i>
+                    </button>
+                    <button class="btn-action move-down" title="Move Down">
+                        <i class="fas fa-arrow-down"></i>
+                    </button>
+                    <button class="btn-action edit-task" title="Edit">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn-action delete-task" title="Delete">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="task-edit" style="display: none;">
+                <div class="input-group">
+                    <input type="text" class="form-control edit-input">
+                    <button class="btn btn-success save-edit">
+                        <i class="fas fa-check"></i>
+                    </button>
+                    <button class="btn btn-secondary cancel-edit">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <script src="app.js"></script>
+</body>
+</html>
