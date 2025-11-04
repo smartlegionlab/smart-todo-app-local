@@ -53,7 +53,6 @@ class TodoApp {
             this.handleTaskContainerChange(e);
         });
 
-
         document.getElementById('exitApp').addEventListener('click', () => this.exitApp())
 
         window.addEventListener('beforeunload', () => this.shutdownServer());
@@ -170,6 +169,10 @@ class TodoApp {
         const task = this.tasks.find(t => t.uuid === taskUuid);
         if (!task) return;
 
+        if (!e.target.closest('.task-checkbox') && !e.target.closest('.btn-action')) {
+            this.setActiveTask(taskUuid);
+        }
+
         if (e.target.closest('.move-up')) {
             this.moveTask(taskUuid, 'up');
         } else if (e.target.closest('.move-down')) {
@@ -182,10 +185,6 @@ class TodoApp {
             this.saveEdit(taskElement, task);
         } else if (e.target.closest('.cancel-edit')) {
             this.disableEditMode(taskElement);
-        } else if (e.target.closest('.checkmark')) {
-            const checkbox = taskElement.querySelector('.task-completed');
-            checkbox.checked = !checkbox.checked;
-            this.updateTask(taskUuid, { completed: checkbox.checked });
         }
     }
 
@@ -466,12 +465,6 @@ class TodoApp {
             if (task.completed) {
                 taskItem.classList.add('completed');
             }
-
-            taskItem.addEventListener('click', (e) => {
-                if (!e.target.closest('.btn-action')) {
-                    this.setActiveTask(task.uuid);
-                }
-            });
 
             taskItem.querySelector('.task-name').textContent = task.name;
             taskItem.querySelector('.task-date').textContent = this.formatDate(task.created_date);
