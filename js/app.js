@@ -62,33 +62,34 @@ class TodoApp {
     }
 
     setupDragAndDrop() {
-    const container = document.getElementById('tasksContainer');
-    
-    container.addEventListener('dragstart', (e) => {
-        if (e.target.classList.contains('task-item')) {
-            e.target.classList.add('dragging');
-            this.draggedTask = e.target;
-        }
-    });
-    
-    container.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        const afterElement = this.getDragAfterElement(container, e.clientY);
-        const draggable = document.querySelector('.dragging');
-        if (draggable) {
-            if (afterElement == null) {
-                container.appendChild(draggable);
-            } else {
-                container.insertBefore(draggable, afterElement);
+        const container = document.getElementById('tasksContainer');
+        
+        container.addEventListener('dragstart', (e) => {
+            if (e.target.classList.contains('task-item')) {
+                e.target.classList.add('dragging');
+                this.draggedTask = e.target;
+                this.activeTaskUuid = e.target.dataset.uuid;
             }
-        }
-    });
-    
-    container.addEventListener('dragend', (e) => {
-        e.target.classList.remove('dragging');
-        this.saveNewOrder();
-    });
-}
+        });
+        
+        container.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            const afterElement = this.getDragAfterElement(container, e.clientY);
+            const draggable = document.querySelector('.dragging');
+            if (draggable) {
+                if (afterElement == null) {
+                    container.appendChild(draggable);
+                } else {
+                    container.insertBefore(draggable, afterElement);
+                }
+            }
+        });
+        
+        container.addEventListener('dragend', (e) => {
+            e.target.classList.remove('dragging');
+            this.saveNewOrder();
+        });
+    }
 
     getDragAfterElement(container, y) {
         const draggableElements = [...container.querySelectorAll('.task-item:not(.dragging)')];
