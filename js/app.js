@@ -12,6 +12,7 @@ class TodoApp {
         this.tasks = [];
         this.currentFilter = 'active';
         this.draggedTask = null;
+        this.activeTaskUuid = null;
         this.init();
     }
 
@@ -89,43 +90,45 @@ class TodoApp {
     });
 }
 
-getDragAfterElement(container, y) {
-    const draggableElements = [...container.querySelectorAll('.task-item:not(.dragging)')];
-    
-    return draggableElements.reduce((closest, child) => {
-        const box = child.getBoundingClientRect();
-        const offset = y - box.top - box.height / 2;
+    getDragAfterElement(container, y) {
+        const draggableElements = [...container.querySelectorAll('.task-item:not(.dragging)')];
         
-        if (offset < 0 && offset > closest.offset) {
-            return { offset: offset, element: child };
-        } else {
-            return closest;
-        }
-    }, { offset: Number.NEGATIVE_INFINITY }).element;
-}
-
-async saveNewOrder() {
-    const container = document.getElementById('tasksContainer');
-    const taskElements = container.querySelectorAll('.task-item');
-    const newOrder = Array.from(taskElements).map(task => task.dataset.uuid);
-    
-    try {
-        const response = await fetch('/api/reorder', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ order: newOrder })
-        });
-
-        if (!response.ok) throw new Error('Failed to save order');
-        
-        this.tasks.sort((a, b) => newOrder.indexOf(a.uuid) - newOrder.indexOf(b.uuid));
-        
-    } catch (error) {
-        console.error('Failed to save task order:', error);
-        this.showNotification('Failed to save task order', 'error');
-        await this.loadTasks();
+        return draggableElements.reduce((closest, child) => {
+            const box = child.getBoundingClientRect();
+            const offset = y - box.top - box.height / 2;
+            
+            if (offset < 0 && offset > closest.offset) {
+                return { offset: offset, element: child };
+            } else {
+                return closest;
+            }
+        }, { offset: Number.NEGATIVE_INFINITY }).element;
     }
-}
+
+    async saveNewOrder() {
+        const container = document.getElementById('tasksContainer');
+        const taskElements = container.querySelectorAll('.task-item');
+        const newOrder = Array.from(taskElements).map(task => task.dataset.uuid);
+        
+        
+        try {
+            const response = await fetch('/api/reorder', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ order: newOrder })
+            });
+
+            if (!response.ok) throw new Error('Failed to save order');
+            
+            this.tasks.sort((a, b) => newOrder.indexOf(a.uuid) - newOrder.indexOf(b.uuid));
+            this.renderTasks();
+            
+        } catch (error) {
+            console.error('Failed to save task order:', error);
+            this.showNotification('Failed to save task order', 'error');
+            await this.loadTasks();
+        }
+    }
 
     async exitApp() {
         if (!confirm('Are you sure you want to log out? The server will be shut down.')) {
@@ -287,6 +290,8 @@ async saveNewOrder() {
         if (newIndex < 0 || newIndex >= this.tasks.length) return;
 
         [this.tasks[taskIndex], this.tasks[newIndex]] = [this.tasks[newIndex], this.tasks[taskIndex]];
+
+        this.activeTaskUuid = uuid;
 
         try {
             const response = await fetch('/api/reorder', {
@@ -453,9 +458,19 @@ async saveNewOrder() {
             taskItem.draggable = true;
             taskItem.tabIndex = 0;
             
+            if (task.uuid === this.activeTaskUuid) {
+                taskItem.classList.add('active');
+            }
+            
             if (task.completed) {
                 taskItem.classList.add('completed');
             }
+
+            taskItem.addEventListener('click', (e) => {
+                if (!e.target.closest('.btn-action')) {
+                    this.setActiveTask(task.uuid);
+                }
+            });
 
             taskItem.querySelector('.task-name').textContent = task.name;
             taskItem.querySelector('.task-date').textContent = this.formatDate(task.created_date);
@@ -465,7 +480,11 @@ async saveNewOrder() {
 
             container.appendChild(taskElement);
         });
-        
+    }
+
+    setActiveTask(uuid) {
+        this.activeTaskUuid = uuid;
+        this.renderTasks();
     }
 
     enableEditMode(taskElement, task) {
