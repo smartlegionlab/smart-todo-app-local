@@ -1,6 +1,6 @@
 # Smart ToDo App
 
-![Smart ToDo App](https://github.com/smartlegionlab/smart-todo-app-local/blob/master/smart_todo_app_local.png)
+![Smart ToDo App](https://github.com/smartlegionlab/smart-todo-app-local/blob/master/images/todo.png)
 
 *Application Screenshot*
 
