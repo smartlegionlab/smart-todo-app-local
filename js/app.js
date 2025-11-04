@@ -58,6 +58,12 @@ class TodoApp {
         window.addEventListener('beforeunload', () => this.shutdownServer());
         this.setupDragAndDrop();
 
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.task-item') && !e.target.closest('.task-edit')) {
+                this.setActiveTask(null);
+            }
+        });
+
     }
 
     setupDragAndDrop() {
@@ -491,6 +497,11 @@ class TodoApp {
         input.value = task.name;
         input.focus();
         input.select();
+
+        input.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+
     }
 
     disableEditMode(taskElement) {
