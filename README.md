@@ -1,6 +1,7 @@
 # Smart ToDo App
 
 ![Smart ToDo App](https://github.com/smartlegionlab/smart-todo-app-local/blob/master/smart_todo_app_local.png)
+
 *Application Screenshot*
 
 ## 🚀 About
@@ -10,14 +11,17 @@
 ## ✨ Features
 
 - ✅ **Complete Task Management** - create, edit, delete, mark as completed
-- 🔄 **Task Reordering** - change task order with up/down buttons
+- 🖱️ **Drag & Drop Reordering** - intuitively rearrange tasks with mouse
+- ⬆️⬇️ **Manual Reordering** - move tasks up/down with buttons
 - 🏷️ **Smart Filtering** - view active, completed, or all tasks
 - 💾 **Local Database** - SQLite for reliable data storage
 - 📱 **Responsive Design** - works perfectly on all devices
 - 🎨 **Dark Theme** - modern eye-friendly interface
 - 📊 **Real-time Statistics** - track progress with live counters
 - 📥📤 **Import/Export** - backup and restore your tasks in JSON format
+- 💽 **Auto Backup** - automatic database backups with retention
 - ⚡ **Fast & Lightweight** - no external dependencies required
+- 🔄 **Persistent Order** - task order saved between sessions
 
 ## 🛠️ Technology Stack
 
@@ -35,21 +39,16 @@
 
 ### Installation & Running
 
-1. **Clone or download the project files:**
-   - `main.py` - Python server
-   - `index.html` - Web interface
-   - `styles.css` - Styling
-   - `app.js` - Frontend logic
-
-2. **Run the application:**
+1. **Run the application:**
    ```bash
    python main.py
    ```
 
-3. **The application will:**
-   - Start the local server on port 8000
+2. **The application will:**
+   - Start the local server on available port (8000, 8001, etc.)
    - Automatically open your default browser
    - Create the SQLite database automatically
+   - Create backup directory for database backups
    - Be ready to use immediately
 
 ### Manual Access
@@ -69,6 +68,7 @@ http://localhost:8000
 - **Checkbox**: Mark tasks as completed/incomplete
 - **Edit** (✏️): Modify task text with inline editing
 - **Delete** (🗑️): Remove tasks with confirmation
+- **Drag & Drop**: Reorder tasks by dragging them
 - **Arrows** (⬆️⬇️): Reorder tasks by moving them up/down
 
 ### Filtering
@@ -80,16 +80,23 @@ http://localhost:8000
 - **Export**: Download all tasks as JSON file
 - **Import**: Replace current tasks with JSON backup
 - **Clear Completed**: Remove all finished tasks at once
+- **Exit**: Shut down the server and close the app
 
 ## 📁 Project Structure
 
 ```
-smart-legion-todo/
-├── main.py          # Python server & database
-├── index.html       # Web interface
-├── styles.css       # Styling & responsive design
-├── app.js           # Frontend functionality
-└── todo.db          # SQLite database (auto-created)
+smart-todo-app/
+├── main.py                 # Main server launcher
+├── core/
+│   ├── database.py         # Database operations & backup system
+│   └── todo_app.py         # HTTP handler & API routes
+├── index.html              # Web interface
+├── js/
+│   └── app.js              # Frontend functionality
+├── styles/
+│   └── styles.css          # Styling & responsive design
+├── backups/                # Automatic database backups
+└── todo.db                 # SQLite database (auto-created)
 ```
 
 ## 🔧 API Endpoints
@@ -101,6 +108,7 @@ The application provides a RESTful API:
 - `PUT /api/tasks/{uuid}` - Update task
 - `DELETE /api/tasks/{uuid}` - Delete task
 - `POST /api/reorder` - Update task order
+- `POST /api/shutdown` - Shutdown server
 
 ## 🎨 Customization
 
@@ -123,21 +131,25 @@ Fully responsive design with optimized layouts for:
 - Tablets (768px+)
 - Desktop (1024px+)
 
+## 🔒 Data Safety
+
+- **Automatic Backups**: Database backed up on every startup
+- **Backup Retention**: Keeps last 3 backups, removes older ones
+- **Data Persistence**: Task order and status preserved between sessions
+
 ## 🐛 Troubleshooting
 
 ### Common Issues
 
 **Port already in use:**
 ```bash
-# Kill process using port 8000 (Unix/Linux/Mac)
+# Server automatically finds next available port (8000, 8001, 8002...)
+# Or kill process using port (Unix/Linux/Mac)
 lsof -ti:8000 | xargs kill -9
-
-# Or run on different port
-python main.py  # Edit port in main.py if needed
 ```
 
 **Browser doesn't open automatically:**
-- Manually navigate to `http://localhost:8000`
+- Manually navigate to `http://localhost:8000` (or next available port)
 - Check if your firewall allows Python applications
 
 **Tasks not saving:**
@@ -153,10 +165,6 @@ Copyright © 2024-2025, Alexander Suvorov. All rights reserved.
 
 - **GitHub**: [https://github.com/smartlegionlab/](https://github.com/smartlegionlab/)
 - **Documentation**: Included in source code headers
-
-## 🤝 Contributing
-
-This is a personal project showcasing modern web application development with minimal dependencies.
 
 ---
 
