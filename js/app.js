@@ -169,11 +169,23 @@ class TodoApp {
         
     }
 
-    handleTaskChange(e) {
+    async handleTaskChange(e) {
         if (e.target.classList.contains('task-completed')) {
             const taskElement = e.target.closest('.task-card');
             const taskUuid = taskElement.dataset.uuid;
-            this.updateTask(taskUuid, { completed: e.target.checked });
+            const isCompleted = e.target.checked;
+            
+            try {
+                await this.updateTask(taskUuid, { completed: isCompleted });
+                
+                if (isCompleted) {
+                    this.showNotification('Task completed! 🎉', 'success');
+                } else {
+                    this.showNotification('Task marked as active', 'info');
+                }
+                
+            } catch (error) {
+            }
         }
     }
 
