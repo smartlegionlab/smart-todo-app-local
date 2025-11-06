@@ -10,7 +10,7 @@
 class TodoApp {
     constructor() {
         this.tasks = [];
-        this.currentFilter = 'active';
+        this.currentFilter = 'all';
         this.draggedTask = null;
         this.activeTaskUuid = null;
         this.init();
@@ -27,7 +27,7 @@ class TodoApp {
             if (e.key === 'Enter') this.addTask();
         });
 
-        document.querySelectorAll('.tab').forEach(tab => {
+        document.querySelectorAll('.filter-tab').forEach(tab => {
             tab.addEventListener('click', (e) => {
                 e.preventDefault();
                 this.setFilter(tab.dataset.filter);
@@ -37,6 +37,7 @@ class TodoApp {
         document.getElementById('clearCompleted').addEventListener('click', () => this.clearCompleted());
         document.getElementById('exportTasks').addEventListener('click', () => this.exportTasks());
         document.getElementById('importTasks').addEventListener('click', () => this.importTasks());
+        document.getElementById('exitApp').addEventListener('click', () => this.exitApp());
 
         this.importInput = document.createElement('input');
         this.importInput.type = 'file';
@@ -53,24 +54,21 @@ class TodoApp {
             this.handleTaskContainerChange(e);
         });
 
-        document.getElementById('exitApp').addEventListener('click', () => this.exitApp())
-
         window.addEventListener('beforeunload', () => this.shutdownServer());
         this.setupDragAndDrop();
 
         document.addEventListener('click', (e) => {
-            if (!e.target.closest('.task-item') && !e.target.closest('.task-edit')) {
+            if (!e.target.closest('.task-card') && !e.target.closest('.task-edit')) {
                 this.setActiveTask(null);
             }
         });
-
     }
 
     setupDragAndDrop() {
         const container = document.getElementById('tasksContainer');
         
         container.addEventListener('dragstart', (e) => {
-            if (e.target.classList.contains('task-item')) {
+            if (e.target.classList.contains('task-card')) {
                 e.target.classList.add('dragging');
                 this.draggedTask = e.target;
                 this.activeTaskUuid = e.target.dataset.uuid;
@@ -91,13 +89,15 @@ class TodoApp {
         });
         
         container.addEventListener('dragend', (e) => {
-            e.target.classList.remove('dragging');
-            this.saveNewOrder();
+            if (e.target.classList.contains('task-card')) {
+                e.target.classList.remove('dragging');
+                this.saveNewOrder();
+            }
         });
     }
 
     getDragAfterElement(container, y) {
-        const draggableElements = [...container.querySelectorAll('.task-item:not(.dragging)')];
+        const draggableElements = [...container.querySelectorAll('.task-card:not(.dragging)')];
         
         return draggableElements.reduce((closest, child) => {
             const box = child.getBoundingClientRect();
@@ -113,9 +113,8 @@ class TodoApp {
 
     async saveNewOrder() {
         const container = document.getElementById('tasksContainer');
-        const taskElements = container.querySelectorAll('.task-item');
+        const taskElements = container.querySelectorAll('.task-card');
         const newOrder = Array.from(taskElements).map(task => task.dataset.uuid);
-        
         
         try {
             const response = await fetch('/api/reorder', {
@@ -154,28 +153,24 @@ class TodoApp {
 
     async shutdownServer() {
         try {
-            fetch('/api/shutdown', {
+            await fetch('/api/shutdown', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                signal: AbortSignal.timeout(1000)
-            }).catch(() => {
-                console.log('Server shutdown initiated');
+                headers: { 'Content-Type': 'application/json' }
             });
         } catch (error) {
             console.log('Server shutdown request sent');
         }
     }
 
-
     handleTaskContainerClick(e) {
-        const taskElement = e.target.closest('.task-item');
+        const taskElement = e.target.closest('.task-card');
         if (!taskElement) return;
 
         const taskUuid = taskElement.dataset.uuid;
         const task = this.tasks.find(t => t.uuid === taskUuid);
         if (!task) return;
 
-        if (!e.target.closest('.task-checkbox') && !e.target.closest('.btn-action')) {
+        if (!e.target.closest('.task-checkbox') && !e.target.closest('.task-btn')) {
             this.setActiveTask(taskUuid);
         }
 
@@ -196,7 +191,7 @@ class TodoApp {
 
     handleTaskContainerChange(e) {
         if (e.target.classList.contains('task-completed')) {
-            const taskElement = e.target.closest('.task-item');
+            const taskElement = e.target.closest('.task-card');
             const taskUuid = taskElement.dataset.uuid;
             this.updateTask(taskUuid, { completed: e.target.checked });
         }
@@ -205,6 +200,8 @@ class TodoApp {
     async loadTasks() {
         try {
             const response = await fetch('/api/tasks');
+            if (!response.ok) throw new Error('Failed to fetch tasks');
+            
             const data = await response.json();
             this.tasks = data.tasks || [];
             this.renderTasks();
@@ -369,7 +366,6 @@ class TodoApp {
             }
 
             await this.clearAllTasks();
-
             await this.importTasksData(data.tasks);
 
             this.showNotification(`Successfully imported ${data.tasks.length} tasks`, 'success');
@@ -433,7 +429,7 @@ class TodoApp {
     setFilter(filter) {
         this.currentFilter = filter;
         
-        document.querySelectorAll('.tab').forEach(tab => {
+        document.querySelectorAll('.filter-tab').forEach(tab => {
             tab.classList.toggle('active', tab.dataset.filter === filter);
         });
 
@@ -444,6 +440,11 @@ class TodoApp {
         const container = document.getElementById('tasksContainer');
         const emptyState = document.getElementById('emptyState');
         const template = document.getElementById('taskTemplate');
+
+        if (!container || !emptyState || !template) {
+            console.error('Required DOM elements not found');
+            return;
+        }
 
         container.innerHTML = '';
 
@@ -458,25 +459,26 @@ class TodoApp {
 
         filteredTasks.forEach((task) => {
             const taskElement = template.content.cloneNode(true);
-            const taskItem = taskElement.querySelector('.task-item');
+            const taskCard = taskElement.querySelector('.task-card');
             
-            taskItem.dataset.uuid = task.uuid;
-            taskItem.draggable = true;
-            taskItem.tabIndex = 0;
+            taskCard.dataset.uuid = task.uuid;
+            taskCard.draggable = true;
             
             if (task.uuid === this.activeTaskUuid) {
-                taskItem.classList.add('active');
+                taskCard.classList.add('active');
             }
             
             if (task.completed) {
-                taskItem.classList.add('completed');
+                taskCard.classList.add('completed');
             }
 
-            taskItem.querySelector('.task-name').textContent = task.name;
-            taskItem.querySelector('.task-date').textContent = this.formatDate(task.created_date);
-            
-            const checkbox = taskItem.querySelector('.task-completed');
-            checkbox.checked = task.completed;
+            const taskName = taskElement.querySelector('.task-name');
+            const taskDate = taskElement.querySelector('.task-date');
+            const checkbox = taskElement.querySelector('.task-completed');
+
+            if (taskName) taskName.textContent = task.name;
+            if (taskDate) taskDate.textContent = this.formatDate(task.created_date);
+            if (checkbox) checkbox.checked = task.completed;
 
             container.appendChild(taskElement);
         });
@@ -492,6 +494,8 @@ class TodoApp {
         const edit = taskElement.querySelector('.task-edit');
         const input = taskElement.querySelector('.edit-input');
 
+        if (!content || !edit || !input) return;
+
         content.style.display = 'none';
         edit.style.display = 'block';
         input.value = task.name;
@@ -501,19 +505,22 @@ class TodoApp {
         input.addEventListener('click', (e) => {
             e.stopPropagation();
         });
-
     }
 
     disableEditMode(taskElement) {
         const content = taskElement.querySelector('.task-content');
         const edit = taskElement.querySelector('.task-edit');
 
-        content.style.display = 'flex';
-        edit.style.display = 'none';
+        if (content && edit) {
+            content.style.display = 'flex';
+            edit.style.display = 'none';
+        }
     }
 
     saveEdit(taskElement, task) {
         const input = taskElement.querySelector('.edit-input');
+        if (!input) return;
+        
         const newName = input.value.trim();
         
         if (newName && newName !== task.name) {
@@ -534,26 +541,42 @@ class TodoApp {
             return taskDate === today;
         }).length;
 
-        document.getElementById('totalTasks').textContent = total;
-        document.getElementById('activeTasks').textContent = active;
-        document.getElementById('completedTasks').textContent = completed;
-        document.getElementById('completionRate').textContent = `${completionRate}%`;
-        document.getElementById('todayTasks').textContent = today;
+        this.updateElementText('totalTasks', total);
+        this.updateElementText('activeTasks', active);
+        this.updateElementText('completedTasks', completed);
+        this.updateElementText('completionRate', `${completionRate}%`);
+        this.updateElementText('todayTasks', `${today} today`);
 
-        document.getElementById('allCount').textContent = total;
-        document.getElementById('activeCount').textContent = active;
-        document.getElementById('completedCount').textContent = completed;
+        this.updateElementText('allCount', total);
+        this.updateElementText('activeCount', active);
+        this.updateElementText('completedCount', completed);
+
+        const progressFill = document.getElementById('progressFill');
+        if (progressFill) {
+            progressFill.style.width = `${completionRate}%`;
+        }
+    }
+
+    updateElementText(id, text) {
+        const element = document.getElementById(id);
+        if (element) {
+            element.textContent = text;
+        }
     }
 
     formatDate(dateString) {
-        const date = new Date(dateString);
-        return date.toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
+        try {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        } catch (error) {
+            return 'Unknown date';
+        }
     }
 
     exportTasks() {
@@ -581,6 +604,9 @@ class TodoApp {
     }
 
     showNotification(message, type = 'info') {
+        const existingNotifications = document.querySelectorAll('.notification');
+        existingNotifications.forEach(notification => notification.remove());
+
         const notification = document.createElement('div');
         notification.className = `notification notification-${type}`;
         notification.innerHTML = `
@@ -588,21 +614,6 @@ class TodoApp {
                 <i class="fas fa-${this.getNotificationIcon(type)}"></i>
                 <span>${message}</span>
             </div>
-        `;
-
-        notification.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: ${this.getNotificationColor(type)};
-            color: white;
-            padding: 1rem 1.5rem;
-            border-radius: 8px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-            z-index: 10000;
-            transform: translateX(400px);
-            transition: transform 0.3s ease;
-            max-width: 300px;
         `;
 
         document.body.appendChild(notification);
@@ -629,16 +640,6 @@ class TodoApp {
             info: 'info-circle'
         };
         return icons[type] || 'info-circle';
-    }
-
-    getNotificationColor(type) {
-        const colors = {
-            success: '#198754',
-            error: '#dc3545',
-            warning: '#ffc107',
-            info: '#0dcaf0'
-        };
-        return colors[type] || '#0dcaf0';
     }
 }
 
