@@ -1,17 +1,13 @@
-// --------------------------------------------------------
-// Licensed under the terms of the BSD 3-Clause License
-// (see LICENSE for details).
-// Copyright © 2024-2025, Alexander Suvorov
-// All rights reserved.
-// --------------------------------------------------------
-// https://github.com/smartlegionlab/
-// --------------------------------------------------------
-
 class TodoApp {
     constructor() {
         this.tasks = [];
         this.currentFilter = 'all';
         this.draggedTask = null;
+        this.previousStats = {
+            total: 0,
+            active: 0,
+            completed: 0
+        };
         this.init();
     }
 
@@ -166,7 +162,6 @@ class TodoApp {
             this.disableEditMode(taskElement);
             return;
         }
-        
     }
 
     async handleTaskChange(e) {
@@ -405,9 +400,10 @@ class TodoApp {
             return taskDate === today;
         }).length;
 
-        this.updateElementText('totalTasks', total);
-        this.updateElementText('activeTasks', active);
-        this.updateElementText('completedTasks', completed);
+        this.animateNumberChange('totalTasks', total, this.previousStats.total);
+        this.animateNumberChange('activeTasks', active, this.previousStats.active);
+        this.animateNumberChange('completedTasks', completed, this.previousStats.completed);
+        
         this.updateElementText('completionRate', `${completionRate}%`);
         this.updateElementText('todayTasks', `${today} today`);
 
@@ -419,6 +415,23 @@ class TodoApp {
         if (progressFill) {
             progressFill.style.width = `${completionRate}%`;
         }
+
+        this.previousStats = { total, active, completed };
+    }
+
+    animateNumberChange(elementId, newValue, oldValue) {
+        const element = document.getElementById(elementId);
+        if (!element) return;
+
+        if (newValue !== oldValue) {
+            element.classList.add('changing');
+            
+            setTimeout(() => {
+                element.classList.remove('changing');
+            }, 500);
+        }
+        
+        element.textContent = newValue;
     }
 
     updateElementText(id, text) {
