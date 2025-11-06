@@ -101,6 +101,13 @@ body {
     padding: 1rem;
     min-width: 100px;
     text-align: center;
+    transition: all 0.2s ease;
+}
+
+.stat-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
 }
 
 .stat-icon {
@@ -178,10 +185,13 @@ body {
     align-items: center;
     gap: 0.5rem;
     white-space: nowrap;
+    transition: all 0.2s ease;
 }
 
 .add-btn:hover {
     background: var(--accent-dark);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(13, 110, 253, 0.3);
 }
 
 .progress-card {
@@ -272,11 +282,17 @@ body {
     gap: 0.5rem;
     font-size: 0.9rem;
     white-space: nowrap;
+    transition: all 0.2s ease;
 }
 
 .filter-tab.active {
     background: var(--accent);
     color: white;
+}
+
+.filter-tab:not(.active):hover {
+    background: rgba(13, 110, 253, 0.1);
+    color: var(--accent);
 }
 
 .tab-badge {
@@ -306,11 +322,13 @@ body {
     gap: 0.5rem;
     font-size: 0.9rem;
     white-space: nowrap;
+    transition: all 0.2s ease;
 }
 
 .action-btn:hover {
     background: var(--accent);
     border-color: var(--accent);
+    transform: translateY(-1px);
 }
 
 .action-btn.danger {
@@ -338,7 +356,13 @@ body {
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
     padding: 1rem;
-    transition: border-color 0.2s ease;
+    transition: all 0.2s ease;
+}
+
+.task-card:hover {
+    border-color: var(--accent);
+    box-shadow: 0 2px 8px rgba(13, 110, 253, 0.15);
+    transform: translateY(-1px);
 }
 
 .task-card.completed {
@@ -366,11 +390,17 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: all 0.2s ease;
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
 }
 
 .drag-handle:hover {
     color: var(--accent);
     background: rgba(var(--accent), 0.1);
+    transform: scale(1.1);
 }
 
 .drag-handle:active {
@@ -413,6 +443,11 @@ body {
 .task-text {
     flex: 1;
     min-width: 0;
+    user-select: text;
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    cursor: text;
 }
 
 .task-name {
@@ -421,11 +456,21 @@ body {
     color: var(--text-light);
     margin-bottom: 0.25rem;
     word-break: break-word;
+    user-select: text;
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    cursor: text;
 }
 
 .task-meta {
     font-size: 0.8rem;
     color: var(--text-muted);
+    user-select: text;
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    cursor: text;
 }
 
 .task-actions {
@@ -446,12 +491,14 @@ body {
     align-items: center;
     justify-content: center;
     font-size: 0.8rem;
+    transition: all 0.2s ease;
 }
 
 .task-btn:hover {
     background: var(--accent);
     color: white;
     border-color: var(--accent);
+    transform: scale(1.05);
 }
 
 .task-edit {
@@ -472,6 +519,11 @@ body {
     color: var(--text-light);
     font-size: 1rem;
     font-family: inherit;
+    user-select: text;
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    cursor: text;
 }
 
 .edit-input:focus {
@@ -558,7 +610,7 @@ body {
 }
 
 .notification-success {
-    background: var(--success);
+    background: var(--accent);
     color: white;
 }
 

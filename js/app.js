@@ -58,9 +58,8 @@ class TodoApp {
         const container = document.getElementById('tasksContainer');
         
         container.addEventListener('dragstart', (e) => {
-            if (e.target.classList.contains('drag-handle') || e.target.classList.contains('task-card')) {
-                const taskCard = e.target.classList.contains('task-card') ? e.target : e.target.closest('.task-card');
-                
+            if (e.target.classList.contains('drag-handle')) {
+                const taskCard = e.target.closest('.task-card');
                 if (taskCard) {
                     this.draggedTask = taskCard;
                     taskCard.classList.add('dragging');
@@ -72,6 +71,9 @@ class TodoApp {
                         taskCard.style.opacity = '0.5';
                     }, 0);
                 }
+            } else {
+                e.preventDefault();
+                return false;
             }
         });
         
@@ -99,7 +101,7 @@ class TodoApp {
 
         container.addEventListener('dragenter', (e) => {
             e.preventDefault();
-            if (this.draggedTask && e.target.classList.contains('task-card')) {
+            if (this.draggedTask && e.target.classList.contains('task-card') && e.target !== this.draggedTask) {
                 e.target.classList.add('drag-over');
             }
         });
@@ -164,6 +166,7 @@ class TodoApp {
             this.disableEditMode(taskElement);
             return;
         }
+        
     }
 
     handleTaskChange(e) {
@@ -297,6 +300,11 @@ class TodoApp {
         input.value = task.name;
         input.focus();
         input.select();
+        
+        const stopPropagation = (e) => e.stopPropagation();
+        input.addEventListener('mousedown', stopPropagation);
+        input.addEventListener('click', stopPropagation);
+        input.addEventListener('dragstart', stopPropagation);
     }
 
     disableEditMode(taskElement) {
