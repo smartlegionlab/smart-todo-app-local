@@ -823,3 +823,70 @@ body {
     border-color: var(--accent);
     box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
 }
+
+.drag-handle {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    cursor: grab;
+    border-radius: var(--radius-sm);
+    transition: all 0.3s ease;
+    margin-right: var(--space-xs);
+    flex-shrink: 0;
+}
+
+.drag-handle:hover {
+    background: var(--accent);
+    color: white;
+    transform: scale(1.1);
+}
+
+.drag-handle:active {
+    cursor: grabbing;
+    transform: scale(1);
+}
+
+.task-card {
+    user-select: text;
+}
+
+.task-name {
+    user-select: text;
+    cursor: text;
+}
+
+.task-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.edit-input {
+    width: 100%;
+    padding: var(--space-sm);
+    border: 2px solid var(--accent);
+    border-radius: var(--radius-sm);
+    background: var(--primary);
+    color: var(--text-light);
+    font-size: 1rem;
+    font-family: inherit;
+}
+
+.edit-input:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
+}
+
+@media (max-width: 768px) {
+    .drag-handle {
+        width: 20px;
+        height: 20px;
+        margin-right: var(--space-xs);
+    }
+    
+    .task-content {
+        gap: var(--space-sm);
+    }
+}

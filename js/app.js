@@ -13,6 +13,7 @@ class TodoApp {
         this.currentFilter = 'all';
         this.draggedTask = null;
         this.activeTaskUuid = null;
+        this.isDragging = false;
         this.init();
     }
 
@@ -54,6 +55,11 @@ class TodoApp {
             this.handleTaskContainerChange(e);
         });
 
+        // Двойной клик для редактирования
+        document.getElementById('tasksContainer').addEventListener('dblclick', (e) => {
+            this.handleTaskDoubleClick(e);
+        });
+
         window.addEventListener('beforeunload', () => this.shutdownServer());
         this.setupDragAndDrop();
 
@@ -67,18 +73,30 @@ class TodoApp {
     setupDragAndDrop() {
         const container = document.getElementById('tasksContainer');
         
+        // Drag start только на ручке
         container.addEventListener('dragstart', (e) => {
-            if (e.target.classList.contains('task-card')) {
-                e.target.classList.add('dragging');
-                this.draggedTask = e.target;
-                this.activeTaskUuid = e.target.dataset.uuid;
+            if (e.target.classList.contains('drag-handle')) {
+                const taskCard = e.target.closest('.task-card');
+                if (taskCard) {
+                    taskCard.classList.add('dragging');
+                    this.draggedTask = taskCard;
+                    this.isDragging = true;
+                    this.activeTaskUuid = taskCard.dataset.uuid;
+                    
+                    // Устанавливаем данные для drag & drop
+                    e.dataTransfer.setData('text/plain', taskCard.dataset.uuid);
+                    e.dataTransfer.effectAllowed = 'move';
+                }
             }
         });
         
         container.addEventListener('dragover', (e) => {
             e.preventDefault();
+            if (!this.isDragging) return;
+            
             const afterElement = this.getDragAfterElement(container, e.clientY);
             const draggable = document.querySelector('.dragging');
+            
             if (draggable) {
                 if (afterElement == null) {
                     container.appendChild(draggable);
@@ -89,9 +107,19 @@ class TodoApp {
         });
         
         container.addEventListener('dragend', (e) => {
-            if (e.target.classList.contains('task-card')) {
-                e.target.classList.remove('dragging');
+            this.isDragging = false;
+            const draggingElement = document.querySelector('.dragging');
+            if (draggingElement) {
+                draggingElement.classList.remove('dragging');
                 this.saveNewOrder();
+            }
+        });
+
+        // Отключаем стандартное поведение drag для текста
+        container.addEventListener('drag', (e) => {
+            if (!e.target.classList.contains('drag-handle')) {
+                e.preventDefault();
+                return false;
             }
         });
     }
@@ -135,34 +163,10 @@ class TodoApp {
         }
     }
 
-    async exitApp() {
-        if (!confirm('Are you sure you want to log out? The server will be shut down.')) {
-            return;
-        }
-
-        try {
-            await this.shutdownServer();
-            setTimeout(() => {
-                window.close();
-            }, 500);
-        } catch (error) {
-            console.log('Server already stopped, closing tab...');
-            window.close();
-        }
-    }
-
-    async shutdownServer() {
-        try {
-            await fetch('/api/shutdown', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' }
-            });
-        } catch (error) {
-            console.log('Server shutdown request sent');
-        }
-    }
-
     handleTaskContainerClick(e) {
+        // Игнорируем клики при перетаскивании
+        if (this.isDragging) return;
+
         const taskElement = e.target.closest('.task-card');
         if (!taskElement) return;
 
@@ -170,10 +174,21 @@ class TodoApp {
         const task = this.tasks.find(t => t.uuid === taskUuid);
         if (!task) return;
 
-        if (!e.target.closest('.task-checkbox') && !e.target.closest('.task-btn')) {
-            this.setActiveTask(taskUuid);
+        // Игнорируем клики на ручке перетаскивания
+        if (e.target.closest('.drag-handle')) {
+            return;
         }
 
+        // Обрабатываем клики на чекбоксе
+        if (e.target.closest('.task-checkbox')) {
+            const checkbox = e.target.closest('.task-checkbox').querySelector('.task-completed');
+            if (checkbox) {
+                this.updateTask(taskUuid, { completed: checkbox.checked });
+            }
+            return;
+        }
+
+        // Обрабатываем клики на кнопках действий
         if (e.target.closest('.move-up')) {
             this.moveTask(taskUuid, 'up');
         } else if (e.target.closest('.move-down')) {
@@ -186,6 +201,27 @@ class TodoApp {
             this.saveEdit(taskElement, task);
         } else if (e.target.closest('.cancel-edit')) {
             this.disableEditMode(taskElement);
+        } else {
+            // Клик на самой задаче - выделяем
+            this.setActiveTask(taskUuid);
+        }
+    }
+
+    handleTaskDoubleClick(e) {
+        if (this.isDragging) return;
+
+        const taskElement = e.target.closest('.task-card');
+        if (!taskElement) return;
+
+        // Игнорируем двойной клик на ручке и кнопках
+        if (e.target.closest('.drag-handle') || e.target.closest('.task-btn')) {
+            return;
+        }
+
+        const taskUuid = taskElement.dataset.uuid;
+        const task = this.tasks.find(t => t.uuid === taskUuid);
+        if (task) {
+            this.enableEditMode(taskElement, task);
         }
     }
 
@@ -197,6 +233,7 @@ class TodoApp {
         }
     }
 
+    // Остальные методы остаются без изменений...
     async loadTasks() {
         try {
             const response = await fetch('/api/tasks');
@@ -462,7 +499,6 @@ class TodoApp {
             const taskCard = taskElement.querySelector('.task-card');
             
             taskCard.dataset.uuid = task.uuid;
-            taskCard.draggable = true;
             
             if (task.uuid === this.activeTaskUuid) {
                 taskCard.classList.add('active');
@@ -502,7 +538,8 @@ class TodoApp {
         input.focus();
         input.select();
 
-        input.addEventListener('click', (e) => {
+        // Останавливаем всплытие событий в поле ввода
+        input.addEventListener('mousedown', (e) => {
             e.stopPropagation();
         });
     }
@@ -601,6 +638,33 @@ class TodoApp {
         URL.revokeObjectURL(url);
 
         this.showNotification('Tasks exported successfully', 'success');
+    }
+
+    async exitApp() {
+        if (!confirm('Are you sure you want to log out? The server will be shut down.')) {
+            return;
+        }
+
+        try {
+            await this.shutdownServer();
+            setTimeout(() => {
+                window.close();
+            }, 500);
+        } catch (error) {
+            console.log('Server already stopped, closing tab...');
+            window.close();
+        }
+    }
+
+    async shutdownServer() {
+        try {
+            await fetch('/api/shutdown', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+        } catch (error) {
+            console.log('Server shutdown request sent');
+        }
     }
 
     showNotification(message, type = 'info') {
