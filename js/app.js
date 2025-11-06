@@ -12,8 +12,6 @@ class TodoApp {
         this.tasks = [];
         this.currentFilter = 'all';
         this.draggedTask = null;
-        this.activeTaskUuid = null;
-        this.isDragging = false;
         this.init();
     }
 
@@ -47,80 +45,76 @@ class TodoApp {
         this.importInput.addEventListener('change', (e) => this.handleFileImport(e));
         document.body.appendChild(this.importInput);
 
-        document.getElementById('tasksContainer').addEventListener('click', (e) => {
-            this.handleTaskContainerClick(e);
-        });
-
-        document.getElementById('tasksContainer').addEventListener('change', (e) => {
-            this.handleTaskContainerChange(e);
-        });
-
-        // Двойной клик для редактирования
-        document.getElementById('tasksContainer').addEventListener('dblclick', (e) => {
-            this.handleTaskDoubleClick(e);
-        });
-
-        window.addEventListener('beforeunload', () => this.shutdownServer());
+        const tasksContainer = document.getElementById('tasksContainer');
+        tasksContainer.addEventListener('click', (e) => this.handleTaskClick(e));
+        tasksContainer.addEventListener('change', (e) => this.handleTaskChange(e));
+        
         this.setupDragAndDrop();
 
-        document.addEventListener('click', (e) => {
-            if (!e.target.closest('.task-card') && !e.target.closest('.task-edit')) {
-                this.setActiveTask(null);
-            }
-        });
+        window.addEventListener('beforeunload', () => this.shutdownServer());
     }
 
     setupDragAndDrop() {
         const container = document.getElementById('tasksContainer');
         
-        // Drag start только на ручке
         container.addEventListener('dragstart', (e) => {
-            if (e.target.classList.contains('drag-handle')) {
-                const taskCard = e.target.closest('.task-card');
+            if (e.target.classList.contains('drag-handle') || e.target.classList.contains('task-card')) {
+                const taskCard = e.target.classList.contains('task-card') ? e.target : e.target.closest('.task-card');
+                
                 if (taskCard) {
-                    taskCard.classList.add('dragging');
                     this.draggedTask = taskCard;
-                    this.isDragging = true;
-                    this.activeTaskUuid = taskCard.dataset.uuid;
+                    taskCard.classList.add('dragging');
                     
-                    // Устанавливаем данные для drag & drop
                     e.dataTransfer.setData('text/plain', taskCard.dataset.uuid);
                     e.dataTransfer.effectAllowed = 'move';
+                    
+                    setTimeout(() => {
+                        taskCard.style.opacity = '0.5';
+                    }, 0);
                 }
             }
         });
         
         container.addEventListener('dragover', (e) => {
             e.preventDefault();
-            if (!this.isDragging) return;
+            if (!this.draggedTask) return;
             
             const afterElement = this.getDragAfterElement(container, e.clientY);
-            const draggable = document.querySelector('.dragging');
             
-            if (draggable) {
-                if (afterElement == null) {
-                    container.appendChild(draggable);
-                } else {
-                    container.insertBefore(draggable, afterElement);
-                }
+            if (afterElement == null) {
+                container.appendChild(this.draggedTask);
+            } else {
+                container.insertBefore(this.draggedTask, afterElement);
             }
         });
         
         container.addEventListener('dragend', (e) => {
-            this.isDragging = false;
-            const draggingElement = document.querySelector('.dragging');
-            if (draggingElement) {
-                draggingElement.classList.remove('dragging');
+            if (this.draggedTask) {
+                this.draggedTask.classList.remove('dragging');
+                this.draggedTask.style.opacity = '1';
                 this.saveNewOrder();
+                this.draggedTask = null;
             }
         });
 
-        // Отключаем стандартное поведение drag для текста
-        container.addEventListener('drag', (e) => {
-            if (!e.target.classList.contains('drag-handle')) {
-                e.preventDefault();
-                return false;
+        container.addEventListener('dragenter', (e) => {
+            e.preventDefault();
+            if (this.draggedTask && e.target.classList.contains('task-card')) {
+                e.target.classList.add('drag-over');
             }
+        });
+
+        container.addEventListener('dragleave', (e) => {
+            if (e.target.classList.contains('task-card')) {
+                e.target.classList.remove('drag-over');
+            }
+        });
+
+        container.addEventListener('drop', (e) => {
+            e.preventDefault();
+            document.querySelectorAll('.task-card').forEach(card => {
+                card.classList.remove('drag-over');
+            });
         });
     }
 
@@ -139,34 +133,7 @@ class TodoApp {
         }, { offset: Number.NEGATIVE_INFINITY }).element;
     }
 
-    async saveNewOrder() {
-        const container = document.getElementById('tasksContainer');
-        const taskElements = container.querySelectorAll('.task-card');
-        const newOrder = Array.from(taskElements).map(task => task.dataset.uuid);
-        
-        try {
-            const response = await fetch('/api/reorder', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ order: newOrder })
-            });
-
-            if (!response.ok) throw new Error('Failed to save order');
-            
-            this.tasks.sort((a, b) => newOrder.indexOf(a.uuid) - newOrder.indexOf(b.uuid));
-            this.renderTasks();
-            
-        } catch (error) {
-            console.error('Failed to save task order:', error);
-            this.showNotification('Failed to save task order', 'error');
-            await this.loadTasks();
-        }
-    }
-
-    handleTaskContainerClick(e) {
-        // Игнорируем клики при перетаскивании
-        if (this.isDragging) return;
-
+    handleTaskClick(e) {
         const taskElement = e.target.closest('.task-card');
         if (!taskElement) return;
 
@@ -174,58 +141,32 @@ class TodoApp {
         const task = this.tasks.find(t => t.uuid === taskUuid);
         if (!task) return;
 
-        // Игнорируем клики на ручке перетаскивания
-        if (e.target.closest('.drag-handle')) {
+        if (e.target.classList.contains('drag-handle')) {
             return;
         }
 
-        // Обрабатываем клики на чекбоксе
-        if (e.target.closest('.task-checkbox')) {
-            const checkbox = e.target.closest('.task-checkbox').querySelector('.task-completed');
-            if (checkbox) {
-                this.updateTask(taskUuid, { completed: checkbox.checked });
-            }
-            return;
-        }
-
-        // Обрабатываем клики на кнопках действий
-        if (e.target.closest('.move-up')) {
-            this.moveTask(taskUuid, 'up');
-        } else if (e.target.closest('.move-down')) {
-            this.moveTask(taskUuid, 'down');
-        } else if (e.target.closest('.edit-task')) {
+        if (e.target.closest('.edit-task')) {
             this.enableEditMode(taskElement, task);
-        } else if (e.target.closest('.delete-task')) {
+            return;
+        }
+
+        if (e.target.closest('.delete-task')) {
             this.deleteTask(taskUuid);
-        } else if (e.target.closest('.save-edit')) {
-            this.saveEdit(taskElement, task);
-        } else if (e.target.closest('.cancel-edit')) {
-            this.disableEditMode(taskElement);
-        } else {
-            // Клик на самой задаче - выделяем
-            this.setActiveTask(taskUuid);
-        }
-    }
-
-    handleTaskDoubleClick(e) {
-        if (this.isDragging) return;
-
-        const taskElement = e.target.closest('.task-card');
-        if (!taskElement) return;
-
-        // Игнорируем двойной клик на ручке и кнопках
-        if (e.target.closest('.drag-handle') || e.target.closest('.task-btn')) {
             return;
         }
 
-        const taskUuid = taskElement.dataset.uuid;
-        const task = this.tasks.find(t => t.uuid === taskUuid);
-        if (task) {
-            this.enableEditMode(taskElement, task);
+        if (e.target.closest('.save-edit')) {
+            this.saveEdit(taskElement, task);
+            return;
+        }
+
+        if (e.target.closest('.cancel-edit')) {
+            this.disableEditMode(taskElement);
+            return;
         }
     }
 
-    handleTaskContainerChange(e) {
+    handleTaskChange(e) {
         if (e.target.classList.contains('task-completed')) {
             const taskElement = e.target.closest('.task-card');
             const taskUuid = taskElement.dataset.uuid;
@@ -233,7 +174,6 @@ class TodoApp {
         }
     }
 
-    // Остальные методы остаются без изменений...
     async loadTasks() {
         try {
             const response = await fetch('/api/tasks');
@@ -295,7 +235,6 @@ class TodoApp {
             
             this.renderTasks();
             this.updateStats();
-            this.showNotification('Task updated', 'success');
         } catch (error) {
             console.error('Failed to update task:', error);
             this.showNotification('Failed to update task', 'error');
@@ -322,34 +261,189 @@ class TodoApp {
         }
     }
 
-    async moveTask(uuid, direction) {
-        const taskIndex = this.tasks.findIndex(task => task.uuid === uuid);
-        if (taskIndex === -1) return;
-
-        const newIndex = direction === 'up' ? taskIndex - 1 : taskIndex + 1;
-        if (newIndex < 0 || newIndex >= this.tasks.length) return;
-
-        [this.tasks[taskIndex], this.tasks[newIndex]] = [this.tasks[newIndex], this.tasks[taskIndex]];
-
-        this.activeTaskUuid = uuid;
-
+    async saveNewOrder() {
+        const container = document.getElementById('tasksContainer');
+        const taskElements = container.querySelectorAll('.task-card');
+        const newOrder = Array.from(taskElements).map(task => task.dataset.uuid);
+        
         try {
             const response = await fetch('/api/reorder', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    order: this.tasks.map(task => task.uuid)
-                })
+                body: JSON.stringify({ order: newOrder })
             });
 
-            if (!response.ok) throw new Error('Failed to reorder tasks');
+            if (!response.ok) throw new Error('Failed to save order');
             
-            this.renderTasks();
+            this.tasks.sort((a, b) => newOrder.indexOf(a.uuid) - newOrder.indexOf(b.uuid));
+            this.showNotification('Tasks reordered', 'success');
+            
         } catch (error) {
-            console.error('Failed to reorder tasks:', error);
-            this.showNotification('Failed to reorder tasks', 'error');
+            console.error('Failed to save task order:', error);
+            this.showNotification('Failed to save task order', 'error');
             await this.loadTasks();
         }
+    }
+
+    enableEditMode(taskElement, task) {
+        const content = taskElement.querySelector('.task-content');
+        const edit = taskElement.querySelector('.task-edit');
+        const input = taskElement.querySelector('.edit-input');
+
+        if (!content || !edit || !input) return;
+
+        content.style.display = 'none';
+        edit.style.display = 'block';
+        input.value = task.name;
+        input.focus();
+        input.select();
+    }
+
+    disableEditMode(taskElement) {
+        const content = taskElement.querySelector('.task-content');
+        const edit = taskElement.querySelector('.task-edit');
+
+        if (content && edit) {
+            content.style.display = 'flex';
+            edit.style.display = 'none';
+        }
+    }
+
+    saveEdit(taskElement, task) {
+        const input = taskElement.querySelector('.edit-input');
+        if (!input) return;
+        
+        const newName = input.value.trim();
+        
+        if (newName && newName !== task.name) {
+            this.updateTask(task.uuid, { name: newName });
+        } else if (!newName) {
+            this.showNotification('Task name cannot be empty', 'warning');
+        }
+        this.disableEditMode(taskElement);
+    }
+
+    setFilter(filter) {
+        this.currentFilter = filter;
+        
+        document.querySelectorAll('.filter-tab').forEach(tab => {
+            tab.classList.toggle('active', tab.dataset.filter === filter);
+        });
+
+        this.renderTasks();
+    }
+
+    renderTasks() {
+        const container = document.getElementById('tasksContainer');
+        const emptyState = document.getElementById('emptyState');
+        const template = document.getElementById('taskTemplate');
+
+        if (!container || !emptyState || !template) return;
+
+        container.innerHTML = '';
+
+        let filteredTasks = this.tasks;
+        if (this.currentFilter === 'active') {
+            filteredTasks = this.tasks.filter(task => !task.completed);
+        } else if (this.currentFilter === 'completed') {
+            filteredTasks = this.tasks.filter(task => task.completed);
+        }
+
+        emptyState.style.display = filteredTasks.length === 0 ? 'block' : 'none';
+
+        filteredTasks.forEach((task) => {
+            const taskElement = template.content.cloneNode(true);
+            const taskCard = taskElement.querySelector('.task-card');
+            
+            taskCard.dataset.uuid = task.uuid;
+            
+            if (task.completed) {
+                taskCard.classList.add('completed');
+            }
+
+            const taskName = taskElement.querySelector('.task-name');
+            const taskDate = taskElement.querySelector('.task-date');
+            const checkbox = taskElement.querySelector('.task-completed');
+
+            if (taskName) taskName.textContent = task.name;
+            if (taskDate) taskDate.textContent = this.formatDate(task.created_date);
+            if (checkbox) checkbox.checked = task.completed;
+
+            container.appendChild(taskElement);
+        });
+    }
+
+    updateStats() {
+        const total = this.tasks.length;
+        const active = this.tasks.filter(task => !task.completed).length;
+        const completed = total - active;
+        const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
+        
+        const today = this.tasks.filter(task => {
+            const taskDate = new Date(task.created_date).toDateString();
+            const today = new Date().toDateString();
+            return taskDate === today;
+        }).length;
+
+        this.updateElementText('totalTasks', total);
+        this.updateElementText('activeTasks', active);
+        this.updateElementText('completedTasks', completed);
+        this.updateElementText('completionRate', `${completionRate}%`);
+        this.updateElementText('todayTasks', `${today} today`);
+
+        this.updateElementText('allCount', total);
+        this.updateElementText('activeCount', active);
+        this.updateElementText('completedCount', completed);
+
+        const progressFill = document.getElementById('progressFill');
+        if (progressFill) {
+            progressFill.style.width = `${completionRate}%`;
+        }
+    }
+
+    updateElementText(id, text) {
+        const element = document.getElementById(id);
+        if (element) {
+            element.textContent = text;
+        }
+    }
+
+    formatDate(dateString) {
+        try {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        } catch (error) {
+            return '';
+        }
+    }
+
+    exportTasks() {
+        const data = {
+            exportedAt: new Date().toISOString(),
+            totalTasks: this.tasks.length,
+            tasks: this.tasks.map(task => ({
+                name: task.name,
+                completed: task.completed,
+                created_date: task.created_date
+            }))
+        };
+
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `todo-export-${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        this.showNotification('Tasks exported successfully', 'success');
     }
 
     async clearCompleted() {
@@ -359,7 +453,7 @@ class TodoApp {
             return;
         }
 
-        if (!confirm(`Are you sure you want to delete ${completedTasks.length} completed task(s)? This action cannot be undone.`)) return;
+        if (!confirm(`Are you sure you want to delete ${completedTasks.length} completed task(s)?`)) return;
 
         try {
             await Promise.all(
@@ -371,7 +465,7 @@ class TodoApp {
             );
             
             await this.loadTasks();
-            this.showNotification(`Successfully deleted ${completedTasks.length} completed tasks`, 'success');
+            this.showNotification(`Cleared ${completedTasks.length} completed tasks`, 'success');
             
         } catch (error) {
             console.error('Failed to clear completed tasks:', error);
@@ -463,185 +557,8 @@ class TodoApp {
         }
     }
 
-    setFilter(filter) {
-        this.currentFilter = filter;
-        
-        document.querySelectorAll('.filter-tab').forEach(tab => {
-            tab.classList.toggle('active', tab.dataset.filter === filter);
-        });
-
-        this.renderTasks();
-    }
-
-    renderTasks() {
-        const container = document.getElementById('tasksContainer');
-        const emptyState = document.getElementById('emptyState');
-        const template = document.getElementById('taskTemplate');
-
-        if (!container || !emptyState || !template) {
-            console.error('Required DOM elements not found');
-            return;
-        }
-
-        container.innerHTML = '';
-
-        let filteredTasks = this.tasks;
-        if (this.currentFilter === 'active') {
-            filteredTasks = this.tasks.filter(task => !task.completed);
-        } else if (this.currentFilter === 'completed') {
-            filteredTasks = this.tasks.filter(task => task.completed);
-        }
-
-        emptyState.style.display = filteredTasks.length === 0 ? 'block' : 'none';
-
-        filteredTasks.forEach((task) => {
-            const taskElement = template.content.cloneNode(true);
-            const taskCard = taskElement.querySelector('.task-card');
-            
-            taskCard.dataset.uuid = task.uuid;
-            
-            if (task.uuid === this.activeTaskUuid) {
-                taskCard.classList.add('active');
-            }
-            
-            if (task.completed) {
-                taskCard.classList.add('completed');
-            }
-
-            const taskName = taskElement.querySelector('.task-name');
-            const taskDate = taskElement.querySelector('.task-date');
-            const checkbox = taskElement.querySelector('.task-completed');
-
-            if (taskName) taskName.textContent = task.name;
-            if (taskDate) taskDate.textContent = this.formatDate(task.created_date);
-            if (checkbox) checkbox.checked = task.completed;
-
-            container.appendChild(taskElement);
-        });
-    }
-
-    setActiveTask(uuid) {
-        this.activeTaskUuid = uuid;
-        this.renderTasks();
-    }
-
-    enableEditMode(taskElement, task) {
-        const content = taskElement.querySelector('.task-content');
-        const edit = taskElement.querySelector('.task-edit');
-        const input = taskElement.querySelector('.edit-input');
-
-        if (!content || !edit || !input) return;
-
-        content.style.display = 'none';
-        edit.style.display = 'block';
-        input.value = task.name;
-        input.focus();
-        input.select();
-
-        // Останавливаем всплытие событий в поле ввода
-        input.addEventListener('mousedown', (e) => {
-            e.stopPropagation();
-        });
-    }
-
-    disableEditMode(taskElement) {
-        const content = taskElement.querySelector('.task-content');
-        const edit = taskElement.querySelector('.task-edit');
-
-        if (content && edit) {
-            content.style.display = 'flex';
-            edit.style.display = 'none';
-        }
-    }
-
-    saveEdit(taskElement, task) {
-        const input = taskElement.querySelector('.edit-input');
-        if (!input) return;
-        
-        const newName = input.value.trim();
-        
-        if (newName && newName !== task.name) {
-            this.updateTask(task.uuid, { name: newName });
-        }
-        this.disableEditMode(taskElement);
-    }
-
-    updateStats() {
-        const total = this.tasks.length;
-        const active = this.tasks.filter(task => !task.completed).length;
-        const completed = total - active;
-        const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
-        
-        const today = this.tasks.filter(task => {
-            const taskDate = new Date(task.created_date).toDateString();
-            const today = new Date().toDateString();
-            return taskDate === today;
-        }).length;
-
-        this.updateElementText('totalTasks', total);
-        this.updateElementText('activeTasks', active);
-        this.updateElementText('completedTasks', completed);
-        this.updateElementText('completionRate', `${completionRate}%`);
-        this.updateElementText('todayTasks', `${today} today`);
-
-        this.updateElementText('allCount', total);
-        this.updateElementText('activeCount', active);
-        this.updateElementText('completedCount', completed);
-
-        const progressFill = document.getElementById('progressFill');
-        if (progressFill) {
-            progressFill.style.width = `${completionRate}%`;
-        }
-    }
-
-    updateElementText(id, text) {
-        const element = document.getElementById(id);
-        if (element) {
-            element.textContent = text;
-        }
-    }
-
-    formatDate(dateString) {
-        try {
-            const date = new Date(dateString);
-            return date.toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-            });
-        } catch (error) {
-            return 'Unknown date';
-        }
-    }
-
-    exportTasks() {
-        const data = {
-            exportedAt: new Date().toISOString(),
-            totalTasks: this.tasks.length,
-            tasks: this.tasks.map(task => ({
-                name: task.name,
-                completed: task.completed,
-                created_date: task.created_date
-            }))
-        };
-
-        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `todo-export-${new Date().toISOString().split('T')[0]}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-
-        this.showNotification('Tasks exported successfully', 'success');
-    }
-
     async exitApp() {
-        if (!confirm('Are you sure you want to log out? The server will be shut down.')) {
+        if (!confirm('Are you sure you want to exit? The server will be shut down.')) {
             return;
         }
 

@@ -10,14 +10,6 @@
 <body>
     <div class="app-container">
         <header class="app-header">
-            <div class="header-background">
-                <div class="floating-shapes">
-                    <div class="shape shape-1"></div>
-                    <div class="shape shape-2"></div>
-                    <div class="shape shape-3"></div>
-                </div>
-            </div>
-            
             <div class="header-content">
                 <div class="brand-section">
                     <div class="logo">
@@ -157,10 +149,10 @@
     </div>
 
     <template id="taskTemplate">
-        <div class="task-card" data-uuid="">
+        <div class="task-card" data-uuid="" draggable="true">
             <div class="task-content">
-                <div class="drag-handle" draggable="true" title="Drag to reorder">
-                    <i class="fas fa-grip-vertical"></i>
+                <div class="drag-handle" title="Drag to reorder">
+                    <i class="fas fa-grip-lines"></i>
                 </div>
                 
                 <div class="task-checkbox">
@@ -170,29 +162,20 @@
                     </span>
                 </div>
                 
-                <div class="task-main">
-                    <div class="task-text">
-                        <span class="task-name"></span>
-                        <div class="task-meta">
-                            <span class="task-date"></span>
-                            <span class="task-status"></span>
-                        </div>
+                <div class="task-text">
+                    <span class="task-name"></span>
+                    <div class="task-meta">
+                        <span class="task-date"></span>
                     </div>
-                    
-                    <div class="task-actions">
-                        <button class="task-btn move-up" title="Move Up">
-                            <i class="fas fa-arrow-up"></i>
-                        </button>
-                        <button class="task-btn move-down" title="Move Down">
-                            <i class="fas fa-arrow-down"></i>
-                        </button>
-                        <button class="task-btn edit-task" title="Edit">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="task-btn delete-task" title="Delete">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
+                </div>
+                
+                <div class="task-actions">
+                    <button class="task-btn edit-task" title="Edit">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="task-btn delete-task" title="Delete">
+                        <i class="fas fa-trash"></i>
+                    </button>
                 </div>
             </div>
             
