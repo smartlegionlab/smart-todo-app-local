@@ -442,17 +442,18 @@ class TodoApp {
     }
 
     formatDate(dateString) {
-        try {
-            const date = new Date(dateString);
-            return date.toLocaleDateString('en-US', {
-                month: 'short',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-            });
-        } catch (error) {
-            return '';
-        }
+        const date = new Date(dateString);
+        
+        const formattedDate = new Intl.DateTimeFormat('ru-RU', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+        }).format(date);
+        
+        return formattedDate.replace(/(\d{2})\.(\d{2})\.(\d{4}),?/, '$1.$2.$3');
     }
 
     exportTasks() {
