@@ -127,6 +127,17 @@
                 </div>
             </section>
         </main>
+
+        <footer style="text-align: center; margin: 10px;">
+            <p>
+                © <span id="currentYear"></span> Alexander Suvorov
+            </p>
+
+            <script>
+                document.getElementById('currentYear').textContent = new Date().getFullYear();
+            </script>
+        </footer>
+
     </div>
 
     <template id="taskTemplate">
