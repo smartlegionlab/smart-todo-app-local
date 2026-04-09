@@ -2,7 +2,7 @@
 # --------------------------------------------------------
 # Licensed under the terms of the BSD 3-Clause License
 # (see LICENSE for details).
-# Copyright © 2024-2025, Alexander Suvorov
+# Copyright © 2026, Alexander Suvorov
 # All rights reserved.
 # --------------------------------------------------------
 # https://github.com/smartlegionlab/
@@ -36,11 +36,11 @@ def main():
     
     server = HTTPServer(('localhost', port), TodoHandler)
     
-    print("🚀 Smart ToDo App Server Started!")
-    print(f"📍 Local: http://localhost:{port}")
-    print("💾 Automatic database backup enabled")
-    print("⏹️  Press Ctrl+C to stop the server")
-    print("🔴 Use 'Exit' button in app to shutdown server")
+    print("Smart ToDo App Server Started!")
+    print(f"Local: http://localhost:{port}")
+    print("Automatic database backup enabled")
+    print("Press Ctrl+C to stop the server")
+    print("Use 'Exit' button in app to shutdown server")
     print("=" * 50)
     
     browser_thread = threading.Thread(target=open_browser, args=(port,))
